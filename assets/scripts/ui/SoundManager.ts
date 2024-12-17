@@ -24,7 +24,7 @@ export class SoundManager extends Component {
         GlobalEvent.on('SCORE_CHANGED', this.onDestroyBlock, this)
         GlobalEvent.on('LEVEL_COMPLETED', this.onLevelComplete, this)
         GlobalEvent.on('PLATFORM_CONTACT', this.onBorderOrPlayerContact, this)
-        GlobalEvent.on('GAME_OVER', this.onGameOver, this)
+        GlobalEvent.on('LIFE_CHANGED', this.onGameOver, this)
 
     }
 
@@ -52,6 +52,6 @@ export class SoundManager extends Component {
         GlobalEvent.off('SCORE_CHANGED', this.onDestroyBlock, this)
         GlobalEvent.off('LEVEL_COMPLETED', this.onLevelComplete, this)
         GlobalEvent.off('PLATFORM_CONTACT', this.onBorderOrPlayerContact, this)
-        GlobalEvent.off('GAME_OVER', this.onGameOver, this)
+        GlobalEvent.off('LIFE_CHANGED', this.onGameOver, this)
     }
 }

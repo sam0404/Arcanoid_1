@@ -13,6 +13,12 @@ export class ScoreTextComponent extends Component {
         this.updateText()
 
         GlobalEvent.on('SCORE_CHANGED', this.scoreChanged, this)
+        GlobalEvent.on('START_GAME', this.onRestart, this)
+    }
+
+    private onRestart() {
+        this._score = 0
+        this.updateText()
     }
 
     private updateText(): void {

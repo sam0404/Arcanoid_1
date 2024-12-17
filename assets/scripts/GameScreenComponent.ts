@@ -15,9 +15,6 @@ export class GameScreenComponent extends Component {
         GameScreenComponent._halfHeight = height / 2
 
         GameScreenComponent._camera = this.node.getComponentInChildren(Camera)
-
-
-        console.warn("hh ", GameScreenComponent._halfHeight, " hw ", GameScreenComponent._halfWidth)
     }
 
     public static get halfWidth(): number {

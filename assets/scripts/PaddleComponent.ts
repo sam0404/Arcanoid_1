@@ -1,4 +1,5 @@
 import { _decorator, Component, Input, input, UITransform, Vec3 } from 'cc';
+import { GlobalEvent } from './event/GlobalEvent';
 import { GameScreenComponent } from './GameScreenComponent';
 import { IGameElement } from './interface/IGameElement';
 const { ccclass, property } = _decorator;
@@ -9,27 +10,30 @@ const SCREEN_OFFSET = 40
 @ccclass('PaddleComponent')
 export class PaddleComponent extends Component {
     @property
-    speed: number = 800; // Скорость перемещения ракетки
+    readonly speed: number = 800;
 
-    private isMouseMove: boolean = false
-    private startPosition: Vec3
+    private _isMouseMove: boolean = false
+    private _startPosition: Vec3
 
-    private halfWidth: number = 0
-    private halfHeight: number = 0
+    private _halfWidth: number = 0
+    private _halfHeight: number = 0
 
-    public init(): void {
-        this.startPosition = this.node.position.clone()
+
+    public init(lifes: number): void {
+        this._startPosition = this.node.position.clone()
         const { width, height } = this.node.getComponent(UITransform)
-        this.halfWidth = width / 2
-        this.halfHeight = height / 2
+        this._halfWidth = width / 2
+        this._halfHeight = height / 2
 
         input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
         input.on(Input.EventType.TOUCH_MOVE, this.onMouseMove, this);
         input.on(Input.EventType.MOUSE_MOVE, this.onMouseMove, this);
+
+        GlobalEvent.on('GAME_OVER', this.gameOver, this)
     }
 
     protected onTouchStart() {
-        if (this.isMouseMove) {
+        if (this._isMouseMove) {
             input.off(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
             input.off(Input.EventType.TOUCH_START, this.onTouchStart, this);
         } else {
@@ -44,8 +48,8 @@ export class PaddleComponent extends Component {
 
     protected onMouseMove(event: any): void {
         this.move(event)
-        if (!this.isMouseMove) {
-            this.isMouseMove = Math.abs(Vec3.distance(this.node.position, this.startPosition)) > 0
+        if (!this._isMouseMove) {
+            this._isMouseMove = Math.abs(Vec3.distance(this.node.position, this._startPosition)) > 0
         }
     }
 
@@ -53,13 +57,11 @@ export class PaddleComponent extends Component {
         let offset = GameScreenComponent.camera.screenToWorld(new Vec3(event.getLocationX(), event.getLocationY(), 0))
         let nextPosition = this.node.worldPosition.clone()
         nextPosition.x = offset.x
-        this.node.worldPosition = nextPosition; // Движение по оси X
+        this.node.worldPosition = nextPosition;
     }
 
     public onMove(): void {
-        // Плавное движение ракетки в зависимости от положения мыши при наведении
-        // Убедитесь, что ракетка не выходит за границы экрана
-        const halfWidth = GameScreenComponent.halfWidth - this.halfWidth;
+        const halfWidth = GameScreenComponent.halfWidth - this._halfWidth;
         if (this.node.position.x < -halfWidth + SCREEN_OFFSET) {
             this.node.setPosition(-halfWidth + SCREEN_OFFSET, this.node.position.y, this.node.position.z);
         } else if (this.node.position.x > halfWidth - SCREEN_OFFSET) {
@@ -68,12 +70,21 @@ export class PaddleComponent extends Component {
     }
 
     public checkContact(gameElement: IGameElement) {
-        if (this.node.worldPosition.x - this.halfWidth < gameElement.elementPosition.x + gameElement.halfSize.width &&
-            this.node.worldPosition.x + this.halfWidth > gameElement.elementPosition.x - gameElement.halfSize.width &&
-            gameElement.elementPosition.y - gameElement.halfSize.height - this.node.worldPosition.y - this.halfHeight <= PADDLE_OFFSET) {
+        if (this.node.worldPosition.x - this._halfWidth < gameElement.elementPosition.x + gameElement.halfSize.width &&
+            this.node.worldPosition.x + this._halfWidth > gameElement.elementPosition.x - gameElement.halfSize.width &&
+            gameElement.elementPosition.y - gameElement.halfSize.height - this.node.worldPosition.y - this._halfHeight <= PADDLE_OFFSET) {
             gameElement.onContact(this.node.worldPosition.x - gameElement.elementPosition.x)
         }
 
+    }
+
+    private gameOver(): void {
+        input.off(Input.EventType.TOUCH_START, this.onTouchStart, this);
+        input.off(Input.EventType.TOUCH_MOVE, this.onMouseMove, this);
+        input.off(Input.EventType.MOUSE_MOVE, this.onMouseMove, this);
+        GlobalEvent.off('GAME_OVER', this.gameOver, this)
+
+        this._isMouseMove = false
     }
 
     protected onDestroy(): void {

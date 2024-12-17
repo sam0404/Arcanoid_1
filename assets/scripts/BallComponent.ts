@@ -38,6 +38,9 @@ export class BallComponent extends Component implements IGameElement {
 
         this.direction = new Vec3(1, 1, 0).normalize();
         input.on(Input.EventType.TOUCH_START, this.onStartGame, this);
+
+        GlobalEvent.on('LEVEL_COMPLETED', this.resetBall, this)
+        GlobalEvent.on('GAME_OVER', this.gameOver, this)
     }
 
     public get halfSize(): Size {
@@ -89,7 +92,7 @@ export class BallComponent extends Component implements IGameElement {
 
         if (this.node.position.y < -GameScreenComponent.halfHeight) {
             this.direction.y = -this.direction.y;
-            GlobalEvent.emit('GAME_OVER')
+            GlobalEvent.emit('LIFE_CHANGED')
             this.resetBall();
         }
     }
@@ -151,5 +154,11 @@ export class BallComponent extends Component implements IGameElement {
 
         this.direction = this.direction.normalize();
         GlobalEvent.emit('PLATFORM_CONTACT')
+    }
+
+    private gameOver(): void {
+        this.resetBall()
+        GlobalEvent.off('LEVEL_COMPLETED', this.resetBall, this)
+        GlobalEvent.off('GAME_OVER', this.resetBall, this)
     }
 }

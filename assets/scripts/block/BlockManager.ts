@@ -1,8 +1,9 @@
-import { _decorator, CCFloat, Component, instantiate, Prefab, UITransform } from 'cc';
+import { _decorator, CCFloat, Component, instantiate, NodePool, Prefab, UITransform } from 'cc';
 import { GlobalEvent } from '../event/GlobalEvent';
 import { BlockComponent } from './BlockComponent';
 const { ccclass, property } = _decorator;
 
+const QUANTITY_BLOCKS = 20
 @ccclass('BlockManager')
 export class BlockManager extends Component {
     @property(Prefab)
@@ -17,11 +18,33 @@ export class BlockManager extends Component {
     @property(CCFloat)
     readonly offsetY: number = 4
 
-    private _blockList: BlockComponent[] = []
+    private _totalRows: number
 
-    public init() {
+    private _blockList: BlockComponent[]
+
+    private _blockPool = new NodePool()
+
+    public init(level: number) {
+        this._totalRows = level + this.row
+        this._blockList = [] as BlockComponent[]
+
         this.createBlocks()
+    }
 
+    public initPool() {
+        for (let i = 0; i < QUANTITY_BLOCKS; i++) {
+            this._blockPool.put(instantiate(this.blockPrefab))
+        }
+    }
+
+    public putAllBlocks() {
+        for (let i = 0; i < this._blockList.length; i++) {
+            if (this._blockList[i] !== null) {
+                this.put(this._blockList[i])
+            }
+        }
+
+        this._blockList = []
     }
 
     public get blockList(): BlockComponent[] {
@@ -29,14 +52,32 @@ export class BlockManager extends Component {
     }
 
     public removeBlock(index: number) {
-        this._blockList[index].node.active = false
+        this.put(this._blockList[index])
         this._blockList[index] = null
 
         GlobalEvent.emit('SCORE_CHANGED', 1)
+
+        let levelComplete = true
+        this._blockList.forEach((block) => {
+            if (block != null) {
+                levelComplete = false
+                return
+            }
+        })
+
+        if (levelComplete) {
+            GlobalEvent.emit('LEVEL_COMPLETED')
+        }
+    }
+
+    private put(block: BlockComponent) {
+        if (!block) return
+
+        this._blockPool.put(block.node)
     }
 
     private createBlocks() {
-        let blockNode = instantiate(this.blockPrefab)
+        let blockNode = this.getBlockComponent()
         let blockComponent = blockNode.getComponent(BlockComponent)
         blockComponent.init(0)
 
@@ -51,13 +92,13 @@ export class BlockManager extends Component {
 
         let deltaX = (containerWidth - totalSize) / 2
 
-        for (let i = 0; i < this.row; i++) {
+        for (let i = 0; i < this._totalRows; i++) {
             for (let j = 0; j < quantityInRow; j++) {
                 let block = null
                 if (i === 0 && j === 0) {
                     block = blockComponent
                 } else {
-                    block = instantiate(this.blockPrefab).getComponent(BlockComponent)
+                    block = this.getBlockComponent()
                 }
 
                 block.init(j * (i + 1))
@@ -70,5 +111,17 @@ export class BlockManager extends Component {
                 this._blockList.push(block)
             }
         }
+    }
+
+    private getBlockComponent(): BlockComponent {
+        let element = this._blockPool.get()
+
+        if (!element) {
+            element = instantiate(this.blockPrefab)
+        }
+
+        const component = element.getComponent(BlockComponent)
+
+        return component
     }
 }
