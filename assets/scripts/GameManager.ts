@@ -29,7 +29,7 @@ export class GameManager extends Component {
     readonly gameOverWindow: GameOverWindow
 
     private _level: number = 0
-    private _lifes: number = 1
+    private _lifes: number = 3
 
     private _currentLife: number
 
