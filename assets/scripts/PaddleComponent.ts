@@ -4,7 +4,7 @@ import { GameScreenComponent } from './GameScreenComponent';
 import { IGameElement } from './interface/IGameElement';
 const { ccclass, property } = _decorator;
 
-const PADDLE_OFFSET = 0.2
+const PADDLE_OFFSET = 12
 const SCREEN_OFFSET = 40
 
 @ccclass('PaddleComponent')
@@ -13,14 +13,12 @@ export class PaddleComponent extends Component {
     readonly speed: number = 800;
 
     private _isClick: boolean = false
-    private _startPosition: Vec3
     private _nextPosition: Vec3 = Vec3.ZERO
 
     private _halfWidth: number = 0
     private _halfHeight: number = 0
 
     public init(): void {
-        this._startPosition = this.node.position.clone()
         this._nextPosition = this.node.worldPosition.clone()
         const { width, height } = this.node.getComponent(UITransform)
         this._halfWidth = width / 2
@@ -70,7 +68,8 @@ export class PaddleComponent extends Component {
     public checkContact(gameElement: IGameElement) {
         if (this.node.worldPosition.x - this._halfWidth < gameElement.elementPosition.x + gameElement.halfSize.width &&
             this.node.worldPosition.x + this._halfWidth > gameElement.elementPosition.x - gameElement.halfSize.width &&
-            gameElement.elementPosition.y - gameElement.halfSize.height - this.node.worldPosition.y - this._halfHeight <= PADDLE_OFFSET) {
+            gameElement.elementPosition.y - this.node.worldPosition.y < gameElement.halfSize.height + this._halfHeight &&
+            gameElement.elementPosition.y - this.node.worldPosition.y > 0) {
             gameElement.onContact(this.node.worldPosition.x - gameElement.elementPosition.x)
         }
     }

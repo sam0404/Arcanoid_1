@@ -9,7 +9,9 @@ enum Axes {
     X,
     Y
 }
+const DELTA = 0.2
 const BALL_OFFSET = 10
+const SCREEN_OFFSET_Y = 60
 @ccclass('BallComponent')
 export class BallComponent extends Component implements IGameElement {
     @property(CCFloat)
@@ -80,20 +82,20 @@ export class BallComponent extends Component implements IGameElement {
     private checkBounds(): void {
         // Проверяем столкновение с границами
         if (this.node.position.x - this.radius < -GameScreenComponent.halfWidth) {
-            this.setNewPosition(- GameScreenComponent.halfWidth + this.radius + 0.2, Axes.X)
+            this.setNewPosition(- GameScreenComponent.halfWidth + this.radius + DELTA, Axes.X)
             this._direction.x = -this._direction.x; // Отскок от левой 
         }
         if (this.node.position.x + this.radius > GameScreenComponent.halfWidth) {
-            this.setNewPosition(GameScreenComponent.halfWidth - this.radius - 0.2, Axes.X)
+            this.setNewPosition(GameScreenComponent.halfWidth - this.radius - DELTA, Axes.X)
             this._direction.x = -this._direction.x;
         }
 
         if (this.node.position.y + this.radius > GameScreenComponent.halfHeight) {
-            this.setNewPosition(GameScreenComponent.halfHeight - this.radius - 0.2, Axes.Y)
+            this.setNewPosition(GameScreenComponent.halfHeight - this.radius - DELTA, Axes.Y)
             this._direction.y = -this._direction.y;
         }
 
-        if (this.node.position.y < -GameScreenComponent.halfHeight) {
+        if (this.node.position.y < -GameScreenComponent.halfHeight + SCREEN_OFFSET_Y) {
             this._direction.y = -this._direction.y;
             GlobalEvent.emit('LIFE_CHANGED')
             this.resetBall();
@@ -131,20 +133,25 @@ export class BallComponent extends Component implements IGameElement {
 
             if (block == null) continue
 
-            if (this.node.worldPosition.x - this._halfSize.width < block.elementPosition.x + block.halfSize.width &&
-                this.node.worldPosition.x + this._halfSize.width > block.elementPosition.x - block.halfSize.width &&
-                this.node.worldPosition.y + this._halfSize.height > block.elementPosition.y - block.halfSize.height &&
-                this.node.worldPosition.y - this._halfSize.height < block.elementPosition.y + block.halfSize.height) {
+            if (this.node.worldPosition.x < block.elementPosition.x + block.halfSize.width &&
+                this.node.worldPosition.x > block.elementPosition.x - block.halfSize.width &&
+                (this.node.worldPosition.y - block.elementPosition.y < block.halfSize.height + this._halfSize.height &&
+                    this.node.worldPosition.y - block.elementPosition.y > 0 ||
+                    block.elementPosition.y - this.node.worldPosition.y < block.halfSize.height + this._halfSize.height &&
+                    block.elementPosition.y - this.node.worldPosition.y > 0)) {
 
-                if (Math.abs(this.node.worldPosition.y - this.halfSize.height - block.elementPosition.y - block.halfSize.height) < BALL_OFFSET ||
-                    Math.abs(block.elementPosition.y - this.node.worldPosition.y - this.halfSize.height - block.halfSize.height) < BALL_OFFSET) {
-                    this._direction.y = -this._direction.y
-                }
-                if (Math.abs(this.node.worldPosition.x - this.halfSize.width - block.elementPosition.x - block.halfSize.width) < BALL_OFFSET ||
-                    Math.abs(block.elementPosition.x - this.node.worldPosition.x - this.halfSize.width - block.halfSize.width) < BALL_OFFSET) {
-                    this._direction.x = -this._direction.x
-                }
+                this._direction.y = -this._direction.y
+                blockManager.removeBlock(i)
+            }
 
+            if (this.node.worldPosition.y > block.elementPosition.y - block.halfSize.height &&
+                this.node.worldPosition.y < block.elementPosition.y + block.halfSize.height && (
+                    block.elementPosition.x - this.node.worldPosition.x < block.halfSize.width + this.halfSize.width &&
+                    block.elementPosition.x - this.node.worldPosition.x > 0 ||
+                    this.node.worldPosition.x - block.elementPosition.x < block.halfSize.width + this.halfSize.width &&
+                    this.node.worldPosition.x - block.elementPosition.x > 0
+                )) {
+                this._direction.x = -this._direction.x
                 blockManager.removeBlock(i)
             }
         }
