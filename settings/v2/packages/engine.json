@@ -15,7 +15,7 @@
         "_value": false
       },
       "animation": {
-        "_value": false
+        "_value": true
       },
       "skeletal-animation": {
         "_value": false
@@ -65,13 +65,13 @@
         "_value": false
       },
       "intersection-2d": {
-        "_value": true
+        "_value": false
       },
       "primitive": {
         "_value": false
       },
       "profiler": {
-        "_value": true
+        "_value": false
       },
       "occlusion-query": {
         "_value": false
@@ -143,13 +143,12 @@
     },
     "includeModules": [
       "2d",
+      "animation",
       "audio",
       "base",
       "custom-pipeline",
       "gfx-webgl",
       "gfx-webgl2",
-      "intersection-2d",
-      "profiler",
       "ui",
       "webview"
     ],

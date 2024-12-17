@@ -29,7 +29,7 @@ export class GameManager extends Component {
     readonly gameOverWindow: GameOverWindow
 
     private _level: number = 0
-    private _lifes: number = 3
+    private _lifes: number = 1
 
     private _currentLife: number
 
@@ -41,6 +41,7 @@ export class GameManager extends Component {
 
         GlobalEvent.on('LEVEL_COMPLETED', this.onLevelChanged, this)
         GlobalEvent.on('LIFE_CHANGED', this.lifeChanged, this)
+        GlobalEvent.on('START_GAME', this.init, this)
     }
 
     private init() {
@@ -50,7 +51,7 @@ export class GameManager extends Component {
         this.gameScreen.init()
         this.ball.init()
         this.blockManager.init(this._level)
-        this.paddle.init(this._lifes)
+        this.paddle.init()
     }
 
     protected update(deltaTime: number): void {
@@ -66,7 +67,6 @@ export class GameManager extends Component {
         if (this._currentLife <= 0) {
             GlobalEvent.emit('GAME_OVER')
             this.blockManager.putAllBlocks()
-            this.init()
         }
     }
 

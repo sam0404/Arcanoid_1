@@ -17,8 +17,9 @@ export class BallComponent extends Component implements IGameElement {
 
     private radius: number
 
-    private direction: Vec3 = new Vec3(1, 1, 0);
-    private isGameStarted: boolean = false;
+    private _direction: Vec3 = new Vec3(1, 1, 0);
+    private _isGameStarted: boolean = false;
+    private _isGameOver: boolean = false
 
     private _halfSize: Size
     private _size: Size
@@ -27,6 +28,7 @@ export class BallComponent extends Component implements IGameElement {
     private _baseParent: Node
 
     public init(): void {
+        this._isGameOver = false
         this._startPositionY = this.node.worldPosition.y
         this._baseParent = this.node.parent
 
@@ -36,7 +38,7 @@ export class BallComponent extends Component implements IGameElement {
         this._halfSize = new Size(width / 2, height / 2)
         this._size = new Size(width, height)
 
-        this.direction = new Vec3(1, 1, 0).normalize();
+        this._direction = new Vec3(1, 1, 0).normalize();
         input.on(Input.EventType.TOUCH_START, this.onStartGame, this);
 
         GlobalEvent.on('LEVEL_COMPLETED', this.resetBall, this)
@@ -56,8 +58,8 @@ export class BallComponent extends Component implements IGameElement {
     }
 
     public onMove(deltaTime: number): void {
-        if (this.isGameStarted) {
-            let offset = this.direction.clone().multiplyScalar(this.speed * deltaTime)
+        if (this._isGameStarted) {
+            let offset = this._direction.clone().multiplyScalar(this.speed * deltaTime)
 
             this.node.position = this.node.position.clone().add(offset);
             this.checkBounds();
@@ -65,33 +67,34 @@ export class BallComponent extends Component implements IGameElement {
     }
 
     protected onStartGame(): void {
-        if (this.isGameStarted) return
+        if (this._isGameOver) return
+        if (this._isGameStarted) return
 
         let position = this.node.worldPosition.clone()
         this.node.setParent(this.node.parent.parent)
         this.node.worldPosition = position
 
-        this.isGameStarted = true;
+        this._isGameStarted = true;
     }
 
     private checkBounds(): void {
         // Проверяем столкновение с границами
         if (this.node.position.x - this.radius < -GameScreenComponent.halfWidth) {
             this.setNewPosition(- GameScreenComponent.halfWidth + this.radius + 0.2, Axes.X)
-            this.direction.x = -this.direction.x; // Отскок от левой 
+            this._direction.x = -this._direction.x; // Отскок от левой 
         }
         if (this.node.position.x + this.radius > GameScreenComponent.halfWidth) {
             this.setNewPosition(GameScreenComponent.halfWidth - this.radius - 0.2, Axes.X)
-            this.direction.x = -this.direction.x;
+            this._direction.x = -this._direction.x;
         }
 
         if (this.node.position.y + this.radius > GameScreenComponent.halfHeight) {
             this.setNewPosition(GameScreenComponent.halfHeight - this.radius - 0.2, Axes.Y)
-            this.direction.y = -this.direction.y;
+            this._direction.y = -this._direction.y;
         }
 
         if (this.node.position.y < -GameScreenComponent.halfHeight) {
-            this.direction.y = -this.direction.y;
+            this._direction.y = -this._direction.y;
             GlobalEvent.emit('LIFE_CHANGED')
             this.resetBall();
         }
@@ -118,8 +121,8 @@ export class BallComponent extends Component implements IGameElement {
         const { x, z } = this._baseParent.worldPosition
         this.node.setWorldPosition(new Vec3(x, this._startPositionY, z))
 
-        this.direction = new Vec3(1, 1, 0).normalize();
-        this.isGameStarted = false;
+        this._direction = new Vec3(1, 1, 0).normalize();
+        this._isGameStarted = false;
     }
 
     public checkContactWithBlock(blockManager: BlockManager) {
@@ -135,11 +138,11 @@ export class BallComponent extends Component implements IGameElement {
 
                 if (Math.abs(this.node.worldPosition.y - this.halfSize.height - block.elementPosition.y - block.halfSize.height) < BALL_OFFSET ||
                     Math.abs(block.elementPosition.y - this.node.worldPosition.y - this.halfSize.height - block.halfSize.height) < BALL_OFFSET) {
-                    this.direction.y = -this.direction.y
+                    this._direction.y = -this._direction.y
                 }
                 if (Math.abs(this.node.worldPosition.x - this.halfSize.width - block.elementPosition.x - block.halfSize.width) < BALL_OFFSET ||
                     Math.abs(block.elementPosition.x - this.node.worldPosition.x - this.halfSize.width - block.halfSize.width) < BALL_OFFSET) {
-                    this.direction.x = -this.direction.x
+                    this._direction.x = -this._direction.x
                 }
 
                 blockManager.removeBlock(i)
@@ -149,14 +152,15 @@ export class BallComponent extends Component implements IGameElement {
 
     public onContact(offset: number): void {
         const randomAngle = (Math.random() * 45 + 30) * (Math.PI / 180);
-        this.direction.x = offset > 0 ? -Math.sin(randomAngle) : Math.sin(randomAngle);
-        this.direction.y = Math.cos(randomAngle);
+        this._direction.x = offset > 0 ? -Math.sin(randomAngle) : Math.sin(randomAngle);
+        this._direction.y = Math.cos(randomAngle);
 
-        this.direction = this.direction.normalize();
+        this._direction = this._direction.normalize();
         GlobalEvent.emit('PLATFORM_CONTACT')
     }
 
     private gameOver(): void {
+        this._isGameOver = true
         this.resetBall()
         GlobalEvent.off('LEVEL_COMPLETED', this.resetBall, this)
         GlobalEvent.off('GAME_OVER', this.resetBall, this)
