@@ -1,5 +1,6 @@
-import { _decorator, CCFloat, Component, EventKeyboard, Input, input, KeyCode, Size, UITransform, Vec3 } from 'cc';
+import { _decorator, CCFloat, Component, Input, input, Node, Size, UITransform, Vec3 } from 'cc';
 import { BlockManager } from './block/BlockManager';
+import { GlobalEvent } from './event/GlobalEvent';
 import { GameScreenComponent } from './GameScreenComponent';
 import { IGameElement } from './interface/IGameElement';
 const { ccclass, property } = _decorator;
@@ -12,27 +13,31 @@ const BALL_OFFSET = 10
 @ccclass('BallComponent')
 export class BallComponent extends Component implements IGameElement {
     @property(CCFloat)
-    public speed: number = 300; // Скорость мяча
+    public speed: number = 300;
 
     private radius: number
 
-    private direction: Vec3 = new Vec3(1, 1, 0); // Направление мяча
+    private direction: Vec3 = new Vec3(1, 1, 0);
     private isGameStarted: boolean = false;
 
     private _halfSize: Size
     private _size: Size
 
+    private _startPositionY: number
+    private _baseParent: Node
+
     public init(): void {
+        this._startPositionY = this.node.worldPosition.y
+        this._baseParent = this.node.parent
+
         const { width, height } = this.node.getComponent(UITransform)
         this.radius = width / 2
 
         this._halfSize = new Size(width / 2, height / 2)
         this._size = new Size(width, height)
 
-        // Установите начальную позицию мяча
-        this.node.setPosition(0, -200, 0);
-        this.direction = new Vec3(1, 1, 0).normalize(); // Нормализуем вектор направления
-        input.on(Input.EventType.KEY_DOWN, this.onKeyDown, this);
+        this.direction = new Vec3(1, 1, 0).normalize();
+        input.on(Input.EventType.TOUCH_START, this.onStartGame, this);
     }
 
     public get halfSize(): Size {
@@ -48,20 +53,22 @@ export class BallComponent extends Component implements IGameElement {
     }
 
     public onMove(deltaTime: number): void {
-        // if (this.isGameStarted) {
-        // Обновляем позицию мяча
-        let offset = this.direction.clone().multiplyScalar(this.speed * deltaTime)
+        if (this.isGameStarted) {
+            let offset = this.direction.clone().multiplyScalar(this.speed * deltaTime)
 
-        this.node.position = this.node.position.clone().add(offset);
-        this.checkBounds();
-        //}
+            this.node.position = this.node.position.clone().add(offset);
+            this.checkBounds();
+        }
     }
 
-    protected onKeyDown(event: EventKeyboard): void {
-        if (event.keyCode === KeyCode.SPACE) {
-            // Начинаем игру по нажатию пробела
-            this.isGameStarted = true;
-        }
+    protected onStartGame(): void {
+        if (this.isGameStarted) return
+
+        let position = this.node.worldPosition.clone()
+        this.node.setParent(this.node.parent.parent)
+        this.node.worldPosition = position
+
+        this.isGameStarted = true;
     }
 
     private checkBounds(): void {
@@ -72,18 +79,18 @@ export class BallComponent extends Component implements IGameElement {
         }
         if (this.node.position.x + this.radius > GameScreenComponent.halfWidth) {
             this.setNewPosition(GameScreenComponent.halfWidth - this.radius - 0.2, Axes.X)
-            this.direction.x = -this.direction.x; //  правой границ
+            this.direction.x = -this.direction.x;
         }
 
         if (this.node.position.y + this.radius > GameScreenComponent.halfHeight) {
             this.setNewPosition(GameScreenComponent.halfHeight - this.radius - 0.2, Axes.Y)
-            this.direction.y = -this.direction.y; // Отскок от верхней границы
+            this.direction.y = -this.direction.y;
         }
 
-        // Проверка, если мяч выходит за нижнюю границу
         if (this.node.position.y < -GameScreenComponent.halfHeight) {
             this.direction.y = -this.direction.y;
-            // this.resetBall(); // Сбрасываем игру
+            GlobalEvent.emit('GAME_OVER')
+            this.resetBall();
         }
     }
 
@@ -104,10 +111,12 @@ export class BallComponent extends Component implements IGameElement {
     }
 
     private resetBall(): void {
-        // Сбрасываем мяч в стартовое положение
-        this.node.setPosition(0, -200, 0);
-        this.direction = new Vec3(1, 1, 0).normalize(); // Возвращаем направление
-        //this.isGameStarted = false; // Останавливаем игру
+        this.node.setParent(this._baseParent)
+        const { x, z } = this._baseParent.worldPosition
+        this.node.setWorldPosition(new Vec3(x, this._startPositionY, z))
+
+        this.direction = new Vec3(1, 1, 0).normalize();
+        this.isGameStarted = false;
     }
 
     public checkContactWithBlock(blockManager: BlockManager) {
@@ -120,38 +129,27 @@ export class BallComponent extends Component implements IGameElement {
                 this.node.worldPosition.x + this._halfSize.width > block.elementPosition.x - block.halfSize.width &&
                 this.node.worldPosition.y + this._halfSize.height > block.elementPosition.y - block.halfSize.height &&
                 this.node.worldPosition.y - this._halfSize.height < block.elementPosition.y + block.halfSize.height) {
-                console.warn("Check", this.node.worldPosition.y - block.elementPosition.y)
-                console.warn("Check", this.halfSize.height, " y ", block.halfSize.height)
 
                 if (Math.abs(this.node.worldPosition.y - this.halfSize.height - block.elementPosition.y - block.halfSize.height) < BALL_OFFSET ||
                     Math.abs(block.elementPosition.y - this.node.worldPosition.y - this.halfSize.height - block.halfSize.height) < BALL_OFFSET) {
                     this.direction.y = -this.direction.y
-                    console.warn("Check Y")
                 }
                 if (Math.abs(this.node.worldPosition.x - this.halfSize.width - block.elementPosition.x - block.halfSize.width) < BALL_OFFSET ||
                     Math.abs(block.elementPosition.x - this.node.worldPosition.x - this.halfSize.width - block.halfSize.width) < BALL_OFFSET) {
                     this.direction.x = -this.direction.x
-                    console.warn("Check X")
                 }
-
 
                 blockManager.removeBlock(i)
             }
         }
-
     }
 
-    // Метод для обработки столкновения с ракеткой
     public onContact(offset: number): void {
-        // Изменяем направление мяча при столкновении с ракеткой
-        // Изменяем направление по оси Y для отскока
-
-        // Находим направление отскока
-        const randomAngle = (Math.random() * 45 + 30) * (Math.PI / 180); // Случайный угол от 30 до 75 градусов
+        const randomAngle = (Math.random() * 45 + 30) * (Math.PI / 180);
         this.direction.x = offset > 0 ? -Math.sin(randomAngle) : Math.sin(randomAngle);
         this.direction.y = Math.cos(randomAngle);
 
-        this.direction = this.direction.normalize(); // Нормализуем вектор направления
-        // this.direction.y = -this.direction.y;
+        this.direction = this.direction.normalize();
+        GlobalEvent.emit('PLATFORM_CONTACT')
     }
 }

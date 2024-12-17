@@ -1,0 +1,6 @@
+export enum EventName {
+    SCORE_CHANGED,
+    LEVEL_COMPLETED,
+    PLATFORM_CONTACT,
+    GAME_OVER
+}

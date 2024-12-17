@@ -1,4 +1,5 @@
 import { _decorator, CCFloat, Component, instantiate, Prefab, UITransform } from 'cc';
+import { GlobalEvent } from '../event/GlobalEvent';
 import { BlockComponent } from './BlockComponent';
 const { ccclass, property } = _decorator;
 
@@ -30,6 +31,8 @@ export class BlockManager extends Component {
     public removeBlock(index: number) {
         this._blockList[index].node.active = false
         this._blockList[index] = null
+
+        GlobalEvent.emit('SCORE_CHANGED', 1)
     }
 
     private createBlocks() {
