@@ -1,4 +1,5 @@
 import { _decorator, CCFloat, Component, EventKeyboard, Input, input, KeyCode, Size, UITransform, Vec3 } from 'cc';
+import { BlockManager } from './block/BlockManager';
 import { GameScreenComponent } from './GameScreenComponent';
 import { IGameElement } from './interface/IGameElement';
 const { ccclass, property } = _decorator;
@@ -7,7 +8,7 @@ enum Axes {
     X,
     Y
 }
-
+const BALL_OFFSET = 10
 @ccclass('BallComponent')
 export class BallComponent extends Component implements IGameElement {
     @property(CCFloat)
@@ -19,12 +20,14 @@ export class BallComponent extends Component implements IGameElement {
     private isGameStarted: boolean = false;
 
     private _halfSize: Size
+    private _size: Size
 
     public init(): void {
         const { width, height } = this.node.getComponent(UITransform)
         this.radius = width / 2
 
         this._halfSize = new Size(width / 2, height / 2)
+        this._size = new Size(width, height)
 
         // Установите начальную позицию мяча
         this.node.setPosition(0, -200, 0);
@@ -34,6 +37,10 @@ export class BallComponent extends Component implements IGameElement {
 
     public get halfSize(): Size {
         return this._halfSize
+    }
+
+    public get size(): Size {
+        return this._size
     }
 
     public get elementPosition(): Vec3 {
@@ -101,6 +108,37 @@ export class BallComponent extends Component implements IGameElement {
         this.node.setPosition(0, -200, 0);
         this.direction = new Vec3(1, 1, 0).normalize(); // Возвращаем направление
         //this.isGameStarted = false; // Останавливаем игру
+    }
+
+    public checkContactWithBlock(blockManager: BlockManager) {
+        for (let i = 0; i < blockManager.blockList.length; i++) {
+            let block = blockManager.blockList[i]
+
+            if (block == null) continue
+
+            if (this.node.worldPosition.x - this._halfSize.width < block.elementPosition.x + block.halfSize.width &&
+                this.node.worldPosition.x + this._halfSize.width > block.elementPosition.x - block.halfSize.width &&
+                this.node.worldPosition.y + this._halfSize.height > block.elementPosition.y - block.halfSize.height &&
+                this.node.worldPosition.y - this._halfSize.height < block.elementPosition.y + block.halfSize.height) {
+                console.warn("Check", this.node.worldPosition.y - block.elementPosition.y)
+                console.warn("Check", this.halfSize.height, " y ", block.halfSize.height)
+
+                if (Math.abs(this.node.worldPosition.y - this.halfSize.height - block.elementPosition.y - block.halfSize.height) < BALL_OFFSET ||
+                    Math.abs(block.elementPosition.y - this.node.worldPosition.y - this.halfSize.height - block.halfSize.height) < BALL_OFFSET) {
+                    this.direction.y = -this.direction.y
+                    console.warn("Check Y")
+                }
+                if (Math.abs(this.node.worldPosition.x - this.halfSize.width - block.elementPosition.x - block.halfSize.width) < BALL_OFFSET ||
+                    Math.abs(block.elementPosition.x - this.node.worldPosition.x - this.halfSize.width - block.halfSize.width) < BALL_OFFSET) {
+                    this.direction.x = -this.direction.x
+                    console.warn("Check X")
+                }
+
+
+                blockManager.removeBlock(i)
+            }
+        }
+
     }
 
     // Метод для обработки столкновения с ракеткой

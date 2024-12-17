@@ -1,9 +1,10 @@
-import { _decorator, Component, Input, input, sys, UITransform, Vec3 } from 'cc';
+import { _decorator, Component, Input, input, UITransform, Vec3 } from 'cc';
 import { GameScreenComponent } from './GameScreenComponent';
 import { IGameElement } from './interface/IGameElement';
 const { ccclass, property } = _decorator;
 
 const PADDLE_OFFSET = 0.2
+const SCREEN_OFFSET = 40
 
 @ccclass('PaddleComponent')
 export class PaddleComponent extends Component {
@@ -59,14 +60,14 @@ export class PaddleComponent extends Component {
         // Плавное движение ракетки в зависимости от положения мыши при наведении
         // Убедитесь, что ракетка не выходит за границы экрана
         const halfWidth = GameScreenComponent.halfWidth - this.halfWidth;
-        if (this.node.position.x < -halfWidth) {
-            this.node.setPosition(-halfWidth, this.node.position.y, this.node.position.z);
-        } else if (this.node.position.x > halfWidth) {
-            this.node.setPosition(halfWidth, this.node.position.y, this.node.position.z);
+        if (this.node.position.x < -halfWidth + SCREEN_OFFSET) {
+            this.node.setPosition(-halfWidth + SCREEN_OFFSET, this.node.position.y, this.node.position.z);
+        } else if (this.node.position.x > halfWidth - SCREEN_OFFSET) {
+            this.node.setPosition(halfWidth - SCREEN_OFFSET, this.node.position.y, this.node.position.z);
         }
     }
 
-    public checkContackt(gameElement: IGameElement) {
+    public checkContact(gameElement: IGameElement) {
         if (this.node.worldPosition.x - this.halfWidth < gameElement.elementPosition.x + gameElement.halfSize.width &&
             this.node.worldPosition.x + this.halfWidth > gameElement.elementPosition.x - gameElement.halfSize.width &&
             gameElement.elementPosition.y - gameElement.halfSize.height - this.node.worldPosition.y - this.halfHeight <= PADDLE_OFFSET) {
@@ -76,10 +77,7 @@ export class PaddleComponent extends Component {
     }
 
     protected onDestroy(): void {
-        if (sys.Platform.ANDROID || sys.Platform.IOS) {
-            input.off(Input.EventType.TOUCH_MOVE, this.onMouseMove, this);
-        } else {
-            input.off(Input.EventType.MOUSE_MOVE, this.onMouseMove, this);
-        }
+        input.off(Input.EventType.TOUCH_MOVE, this.onMouseMove, this);
+        input.off(Input.EventType.MOUSE_MOVE, this.onMouseMove, this);
     }
 }
